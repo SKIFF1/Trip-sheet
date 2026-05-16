@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#07172E">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Trip Sheet">
+<title>Trip Sheet</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#07172E;--panel:#0C2248;--p2:#0E2A58;--bdr:#173880;
+  --blue:#1A52CC;--b2:#2662E0;--gold:#F0A500;--yellow:#FCC419;
+  --red:#B91C1C;--r2:#DC2626;--white:#EDF2F7;--muted:#7A9ABF;
+  --green:#16753A;
+}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--white);font-family:'Segoe UI',system-ui,sans-serif;display:flex;flex-direction:column}
+.screen{display:none;flex-direction:column;height:100%;overflow:hidden}
+.screen.active{display:flex}
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:90px}
+.bar{background:var(--panel);border-bottom:3px solid var(--gold);padding:10px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.bar-logo{font-size:16px;font-weight:900;color:var(--yellow);flex:1}
+.bar-sub{font-size:10px;color:var(--muted);margin-top:1px}
+.back{background:var(--p2);border:none;color:var(--yellow);font-size:22px;padding:4px 12px;border-radius:4px;cursor:pointer}
+.card{background:var(--panel);border:1px solid var(--bdr);border-radius:10px;padding:16px;margin:10px 14px}
+.ctitle{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.btn{display:block;width:100%;padding:13px;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;text-align:center;transition:opacity 0.1s;letter-spacing:.5px}
+.btn:active{opacity:.7}
+.by{background:var(--yellow);color:var(--bg)}
+.bb{background:var(--blue);color:#fff}
+.bg{background:var(--green);color:#fff}
+.br{background:var(--red);color:#fff}
+.bo{background:transparent;border:2px solid var(--bdr);color:var(--white)}
+.bwa{background:#25D366;color:#fff}
+.sm{padding:8px 14px;font-size:12px;display:inline-block;width:auto;border-radius:6px}
+.f{margin-bottom:14px}
+.f label{display:block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.f input,.f select{width:100%;background:var(--bg);border:1px solid var(--bdr);color:var(--white);font-size:15px;padding:11px 12px;border-radius:6px;outline:none;font-family:inherit}
+.f input:focus,.f select:focus{border-color:var(--yellow)}
+.f select option{background:var(--panel)}
+/* LOGIN */
+#s-login{justify-content:center;align-items:center;padding:20px}
+.lbox{background:var(--panel);border:1px solid var(--bdr);border-radius:12px;padding:28px 22px;width:100%;max-width:360px}
+.lhd{text-align:center;margin-bottom:18px}
+.lhd .ico{font-size:44px}
+.lhd h1{font-size:22px;font-weight:900;color:var(--yellow);margin-top:6px}
+.lhd p{font-size:11px;color:var(--muted);margin-top:3px}
+.gbar{height:3px;background:var(--gold);border-radius:2px;margin-bottom:18px}
+.err{color:var(--r2);font-size:12px;text-align:center;min-height:18px;margin:6px 0}
+/* TRIP CODE */
+.ccode{background:var(--bg);border:2px solid var(--bdr);color:var(--yellow);font-size:28px;font-weight:900;letter-spacing:6px;text-align:center;text-transform:uppercase;padding:14px;border-radius:8px;width:100%;outline:none;font-family:monospace}
+.ccode:focus{border-color:var(--yellow)}
+/* STATS BAR */
+.sbar{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--bdr);flex-shrink:0}
+.si{text-align:center}
+.sv{font-size:17px;font-weight:900;color:var(--yellow)}
+.sl{font-size:9px;color:var(--muted);margin-top:1px}
+/* SHOP CARDS */
+.swrap{margin:0 14px 8px;border-radius:10px;overflow:hidden;border:1px solid var(--bdr)}
+.shdr2{padding:12px 14px;display:flex;align-items:center;gap:10px;background:var(--panel);cursor:pointer}
+.shdr2:active{background:var(--p2)}
+.snum{background:var(--p2);color:var(--muted);font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;min-width:30px;text-align:center}
+.sname{flex:1;font-size:14px;font-weight:600}
+.scr{font-size:11px;color:var(--yellow);font-weight:700}
+.spill{font-size:10px;font-weight:700;padding:3px 9px;border-radius:10px;white-space:nowrap}
+.sp0{background:rgba(245,158,11,.15);color:var(--gold);border:1px solid rgba(245,158,11,.3)}
+.sp1{background:rgba(59,130,246,.15);color:#60A5FA;border:1px solid rgba(59,130,246,.3)}
+.sp2{background:rgba(22,117,58,.15);color:#4ADE80;border:1px solid rgba(22,117,58,.3)}
+.sbody{background:var(--p2);padding:14px;display:none;border-top:1px solid var(--bdr)}
+.rbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+/* COUNTER */
+.crow{display:flex;align-items:center;padding:9px 0;border-bottom:1px solid var(--bdr)}
+.crow:last-child{border-bottom:none}
+.clbl{flex:1;font-size:13px;font-weight:600}
+.ctr{display:flex;align-items:center;gap:10px}
+.cbtn{background:var(--panel);border:1px solid var(--bdr);color:var(--white);width:38px;height:38px;border-radius:6px;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;user-select:none}
+.cbtn:active{background:var(--blue)}
+.cval{font-size:19px;font-weight:900;color:var(--yellow);min-width:36px;text-align:center}
+/* SUMMARY */
+.srow{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--bdr);font-size:13px}
+.srow:last-child{border-bottom:none}
+.sk{color:var(--muted)}
+.sv2{font-weight:700}
+/* SCAN OVERLAY */
+.scanov{position:fixed;inset:0;background:#000;z-index:200;display:flex;flex-direction:column;overflow-y:auto}
+.scanov.h{display:none}
+.scan-hdr{background:var(--panel);border-bottom:2px solid var(--gold);padding:10px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.scan-tabs{display:flex;border-bottom:1px solid var(--bdr);flex-shrink:0;background:var(--panel)}
+.scan-tab{flex:1;padding:11px 4px;text-align:center;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;background:none;border:none;border-bottom:2px solid transparent}
+.scan-tab.active{color:var(--yellow);border-bottom-color:var(--yellow)}
+.scan-pane{display:none;flex-direction:column;align-items:center;gap:12px;padding:16px}
+.scan-pane.active{display:flex}
+#qr-reader{width:260px;height:260px;border-radius:8px;overflow:hidden;background:#111}
+/* Document OCR */
+.doc-img{width:100%;max-width:340px;max-height:200px;object-fit:cover;border-radius:8px;border:2px solid var(--bdr);display:none}
+.doc-img.show{display:block}
+.ocr-lines{width:100%;max-width:340px;background:var(--bg);border:1px solid var(--bdr);border-radius:8px;max-height:160px;overflow-y:auto;display:none}
+.ocr-lines.show{display:block}
+.ocr-line{padding:8px 12px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--bdr)}
+.ocr-line:last-child{border-bottom:none}
+.ocr-line:active,.ocr-line.sel{background:var(--blue);color:#fff}
+.ocr-status{font-size:12px;color:var(--muted);text-align:center}
+/* TOAST */
+.toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--panel);border:1px solid var(--bdr);border-left:3px solid var(--green);padding:9px 18px;border-radius:6px;font-size:13px;z-index:300;opacity:0;transition:all .25s;white-space:nowrap;pointer-events:none;max-width:88vw;overflow:hidden;text-overflow:ellipsis}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.terr{border-left-color:var(--r2)}
+.loader{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px}
+.spin{display:inline-block;animation:spin .8s linear infinite;font-size:28px}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* Install banner */
+#install-bar{display:none;background:var(--gold);color:var(--bg);padding:9px 14px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;flex-shrink:0}
+</style>
+</head>
+<body>
+
+<div id="install-bar" onclick="installPWA()">📲 Tap here to install this app on your phone</div>
+
+<!-- LOGIN -->
+<div id="s-login" class="screen active">
+  <div class="lbox">
+    <div class="lhd"><div class="ico">🚛</div><h1>TRIP SHEET</h1><p>Mbongeni's Distribution App</p></div>
+    <div class="gbar"></div>
+    <div class="f"><label>Username</label><input id="uu" type="text" placeholder="username" autocapitalize="none" autocomplete="off"></div>
+    <div class="f"><label>Password</label><input id="up" type="password" placeholder="password"></div>
+    <div class="err" id="lerr"></div>
+    <button class="btn by" onclick="doLogin()">SIGN IN →</button>
+    <p style="text-align:center;font-size:10px;color:var(--muted);margin-top:14px">Powered by Stanley Mutocho</p>
+  </div>
+</div>
+
+<!-- HOME -->
+<div id="s-home" class="screen">
+  <div class="bar">
+    <div style="flex:1"><div class="bar-logo">🚛 TRIP SHEET</div><div class="bar-sub" id="hulbl"></div></div>
+    <button class="btn bo sm" onclick="logout()">Logout</button>
+  </div>
+  <div class="scroll">
+    <div style="padding:28px 14px 8px;text-align:center">
+      <div style="font-size:48px">🔑</div>
+      <div style="font-size:18px;font-weight:900;color:var(--yellow);margin-top:8px">Enter Your Trip Code</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:6px">Your code is assigned by the dispatch personnel</div>
+    </div>
+    <div class="card">
+      <input class="ccode" id="tcode" placeholder="W01-ROUTE" maxlength="20"
+             oninput="this.value=this.value.toUpperCase()"
+             onkeydown="if(event.key==='Enter')loadByCode()">
+      <button class="btn by" style="margin-top:14px" onclick="loadByCode()">🔍 Load My Trip</button>
+    </div>
+    <div id="home-err" style="display:none;text-align:center;padding:8px 14px;font-size:12px;color:var(--r2)"></div>
+    <div style="padding:12px 14px;text-align:center;font-size:11px;color:var(--muted);line-height:1.8">
+      Contact your dispatcher if you haven't received a code.
+    </div>
+  </div>
+</div>
+
+<!-- SHOPS -->
+<div id="s-shops" class="screen">
+  <div class="bar">
+    <button class="back" onclick="goHome()">‹</button>
+    <div style="flex:1"><div class="bar-logo" id="sh-ttl">Shops</div><div class="bar-sub" id="sh-sub"></div></div>
+    <button class="btn bb sm" onclick="syncAll()">↑ Sync</button>
+  </div>
+  <div class="sbar">
+    <div class="si"><div class="sv" id="st-total">0</div><div class="sl">Shops</div></div>
+    <div class="si"><div class="sv" id="st-done" style="color:var(--green)">0</div><div class="sl">Done</div></div>
+    <div class="si"><div class="sv" id="st-crates">0</div><div class="sl">Crates</div></div>
+    <div class="si"><div class="sv" id="st-cash" style="color:var(--gold)">$0</div><div class="sl">Cash</div></div>
+  </div>
+  <div class="scroll" id="shops-wrap">
+    <div class="loader"><div class="spin">⏳</div></div>
+  </div>
+</div>
+
+<!-- COMPLETE -->
+<div id="s-done" class="screen">
+  <div class="bar"><div class="bar-logo">✔ Trip Complete</div></div>
+  <div class="scroll" style="padding:14px">
+    <div class="card"><div class="ctitle">Trip Summary</div><div id="sum-body"></div></div>
+    <button class="btn bwa" style="margin-top:10px" onclick="shareWA()">📱 Share via WhatsApp</button>
+    <button class="btn bg"  style="margin-top:8px"  onclick="syncFinish()">↑ Sync to Cloud & Finish</button>
+    <button class="btn bo"  style="margin-top:8px"  onclick="goHome()">← Start New Trip</button>
+  </div>
+</div>
+
+<!-- SCAN OVERLAY — 3 tabs: QR | Document OCR | Manual -->
+<div class="scanov h" id="scan-ov">
+  <div class="scan-hdr">
+    <div style="flex:1;font-size:15px;font-weight:900;color:var(--yellow)">📷 Add Shop</div>
+    <button class="btn br sm" onclick="stopScan()" style="width:auto">✕ Close</button>
+  </div>
+  <div class="scan-tabs">
+    <button class="scan-tab active" id="tab-qr"     onclick="switchTab('qr')">📲 QR/Barcode</button>
+    <button class="scan-tab"        id="tab-doc"    onclick="switchTab('doc')">📄 Scan Doc</button>
+    <button class="scan-tab"        id="tab-manual" onclick="switchTab('manual')">⌨ Manual</button>
+  </div>
+
+  <!-- QR Tab -->
+  <div class="scan-pane active" id="pane-qr">
+    <p style="font-size:12px;color:var(--muted);text-align:center">Point camera at QR code or barcode on the delivery document</p>
+    <div id="qr-reader"></div>
+    <p class="ocr-status" id="qr-status">Starting camera…</p>
+    <button class="btn bo sm" onclick="switchTab('doc')" style="margin-top:4px">Can't scan? Try document scan</button>
+  </div>
+
+  <!-- Document OCR Tab -->
+  <div class="scan-pane" id="pane-doc">
+    <p style="font-size:12px;color:var(--muted);text-align:center">Take a photo of the delivery note — we'll read the shop name automatically</p>
+    <input type="file" id="doc-input" accept="image/*" capture="environment"
+           style="display:none" onchange="handleDoc(event)">
+    <button class="btn bb" style="max-width:280px" onclick="document.getElementById('doc-input').click()">
+      📸 Open Camera / Choose Photo
+    </button>
+    <img id="doc-img" class="doc-img" alt="document">
+    <div class="ocr-status" id="ocr-status"></div>
+    <div id="ocr-hint" style="display:none;font-size:11px;color:var(--muted);text-align:center">Tap the correct shop name from the list below, or type it</div>
+    <div class="ocr-lines" id="ocr-lines"></div>
+    <div style="width:100%;max-width:340px">
+      <div class="f" style="margin-bottom:10px">
+        <label>Shop Name (confirm or edit)</label>
+        <input type="text" id="doc-name" placeholder="Shop name from document…">
+      </div>
+      <button class="btn bg" onclick="confirmDoc()">✔ Add This Shop</button>
+    </div>
+  </div>
+
+  <!-- Manual Tab -->
+  <div class="scan-pane" id="pane-manual">
+    <p style="font-size:12px;color:var(--muted);text-align:center">Type the shop name to add it to the route</p>
+    <div style="width:100%;max-width:340px">
+      <div class="f">
+        <label>Shop Name</label>
+        <input type="text" id="scan-manual" placeholder="Enter shop name…"
+               onkeydown="if(event.key==='Enter')addManual()">
+      </div>
+      <button class="btn bg" onclick="addManual()">✔ Add Shop</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  SUPABASE CONFIG — hardwired, no user configuration
+// ══════════════════════════════════════════════════════
+const SB_URL = "https://vazynemwwncqgcgcffbn.supabase.co";
+const SB_KEY = "YOUR_SUPABASE_ANON_KEY_HERE";
+// ↑ Replace with your anon key:
+//   Supabase Dashboard → Settings → API → anon public key
+
+let ST = {user:null, role:null, trip:null, shops:[], entries:{}};
+
+// ═══ API helpers ════════════════════════════════
+function hdr(x={}) {
+  return {"apikey":SB_KEY,"Authorization":`Bearer ${SB_KEY}`,"Content-Type":"application/json",...x};
+}
+async function dbGet(tbl, p={}) {
+  const u = new URL(`${SB_URL}/rest/v1/${tbl}`);
+  u.searchParams.set("select","*");
+  Object.entries(p).forEach(([k,v])=>u.searchParams.set(k,v));
+  const r = await fetch(u,{headers:hdr()});
+  if(!r.ok) throw new Error(`${r.status}: ${await r.text()}`);
+  return r.json();
+}
+async function dbPost(tbl, data, pref="return=representation") {
+  const r = await fetch(`${SB_URL}/rest/v1/${tbl}`,{
+    method:"POST", headers:hdr({"Prefer":pref}), body:JSON.stringify(data)
+  });
+  if(!r.ok) throw new Error(`${r.status}: ${await r.text()}`);
+  return pref.includes("representation") ? r.json() : null;
+}
+
+// ═══ PWA setup ══════════════════════════════════
+let _prompt = null;
+window.addEventListener("beforeinstallprompt", e => {
+  e.preventDefault(); _prompt = e;
+  document.getElementById("install-bar").style.display = "block";
+});
+function installPWA() {
+  if (!_prompt) return;
+  _prompt.prompt();
+  _prompt.userChoice.then(()=>{ _prompt=null; document.getElementById("install-bar").style.display="none"; });
+}
+// Inline manifest (enables Add to Home Screen without needing a server manifest file)
+(function(){
+  const icon = "data:image/svg+xml," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="36" fill="#07172E"/><rect x="20" y="75" width="110" height="65" rx="8" fill="#1A52CC"/><rect x="128" y="95" width="46" height="45" rx="6" fill="#1A52CC"/><rect x="130" y="99" width="42" height="25" rx="3" fill="#60A5FA"/><circle cx="50" cy="148" r="14" fill="#FCC419"/><circle cx="50" cy="148" r="7" fill="#07172E"/><circle cx="140" cy="148" r="14" fill="#FCC419"/><circle cx="140" cy="148" r="7" fill="#07172E"/><rect x="20" y="75" width="154" height="8" rx="3" fill="#F0A500"/></svg>`);
+  const mf = {name:"Trip Sheet — Mbongeni Distribution",short_name:"Trip Sheet",
+    start_url:"./",display:"standalone",background_color:"#07172E",theme_color:"#07172E",
+    orientation:"portrait",icons:[{src:icon,sizes:"192x192",type:"image/svg+xml"},{src:icon,sizes:"512x512",type:"image/svg+xml"}]};
+  const lnk = document.createElement("link");
+  lnk.rel = "manifest";
+  lnk.href = URL.createObjectURL(new Blob([JSON.stringify(mf)],{type:"application/manifest+json"}));
+  document.head.appendChild(lnk);
+  // Service worker for offline caching
+  if("serviceWorker" in navigator){
+    const sw=`const C="ts-v3";self.addEventListener("install",e=>e.waitUntil(caches.open(C).then(c=>c.addAll(["./"]))));self.addEventListener("fetch",e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));`;
+    navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:"application/javascript"}))).catch(()=>{});
+  }
+})();
+
+// ═══ SCREENS ════════════════════════════════════
+function show(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  window.scrollTo(0,0);
+}
+function goHome(){ show("s-home"); document.getElementById("tcode").value=""; }
+
+// ═══ LOGIN ══════════════════════════════════════
+async function doLogin(){
+  const u=document.getElementById("uu").value.trim().toLowerCase();
+  const p=document.getElementById("up").value;
+  const err=document.getElementById("lerr");
+  if(!u||!p){err.textContent="Enter username and password.";return;}
+  err.textContent="Signing in…";
+  try{
+    const rows=await dbGet("mda_users",{"username":`eq.${u}`});
+    if(!rows.length||rows[0].password!==p){err.textContent="Invalid credentials.";document.getElementById("up").value="";return;}
+    ST.user=u; ST.role=rows[0].role;
+    document.getElementById("hulbl").textContent=`${u}  ·  ${ST.role.toUpperCase()}`;
+    err.textContent=""; show("s-home");
+  }catch(e){err.textContent=`Error: ${e.message.slice(0,60)}`;}
+}
+document.getElementById("up").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});
+function logout(){ST={user:null,role:null,trip:null,shops:[],entries:{}};show("s-login");}
+
+// ═══ HOME — code-entry only (no route browsing) ═
+async function loadByCode(){
+  const code=document.getElementById("tcode").value.trim().toUpperCase();
+  const errEl=document.getElementById("home-err");
+  errEl.style.display="none";
+  if(!code){toast("Enter your trip code",true);return;}
+  toast("Loading…");
+  try{
+    let t=null;
+    const rows=await dbGet("trip_assignments",{"trip_code":`eq.${code}`,"status":"eq.active"});
+    if(rows.length){t=rows[0];}
+    else{
+      const m=code.match(/^W?(\d+)-(.+)$/i);
+      if(m){
+        const d=await dbGet("dispatch_trips",{"week_number":`eq.${parseInt(m[1])}`,"route":`ilike.${m[2].replace(/-/g," ")}*`});
+        if(d.length) t={trip_code:code,week_number:parseInt(m[1]),route:d[0].route,truck:d[0].truck,driver:ST.user};
+      }
+    }
+    if(!t){errEl.textContent=`Code "${code}" not found. Check with your dispatcher.`;errEl.style.display="block";return;}
+    // Block if trip is assigned to a different driver
+    if(t.driver && t.driver.toLowerCase()!==ST.user.toLowerCase()){
+      errEl.textContent="This trip belongs to another driver. Contact your dispatcher.";
+      errEl.style.display="block"; return;
+    }
+    await openTrip(t);
+  }catch(e){toast(`Error: ${e.message.slice(0,60)}`,true);}
+}
+
+async function openTrip(t){
+  ST.trip=t;
+  document.getElementById("sh-ttl").textContent=t.route||t.trip_code;
+  document.getElementById("sh-sub").textContent=`W${String(t.week_number||"").padStart(2,"0")} · ${t.truck||""} · ${ST.user}`;
+  ST.entries={};
+  await loadShops(t.route);
+  show("s-shops");
+}
+
+// ═══ SHOPS ══════════════════════════════════════
+async function loadShops(route){
+  const el=document.getElementById("shops-wrap");
+  el.innerHTML='<div class="loader"><div class="spin">⏳</div></div>';
+  try{
+    const shops=await dbGet("route_shops",{"route":`eq.${route}`,"active":"eq.true","order":"sequence.asc"});
+    ST.shops=shops;
+    shops.forEach(s=>{
+      if(!ST.entries[s.id]) ST.entries[s.id]={status:"pending",checkin:null,checkout:null,
+        crates:{retail:0,vansale:0,kids:0,box:0,banana:0},empties:0,cash:0,notes:""};
+    });
+    renderShops();
+  }catch(e){el.innerHTML=`<div class="loader" style="color:var(--r2)">Error: ${e.message.slice(0,80)}</div>`;}
+}
+
+function renderShops(){
+  const el=document.getElementById("shops-wrap");
+  if(!ST.shops.length){
+    el.innerHTML=`<div class="loader">No shops for this route yet.</div><div style="padding:0 14px 14px"><button class="btn by" onclick="openScan()">📷 Scan / Add First Shop</button></div>`;
+    updateStats(); return;
+  }
+  const SKUS=[["retail","🟡 Retail"],["vansale","🔵 Vansale"],["kids","🟢 Kids"],["box","📦 Box"],["banana","🍌 Banana 1kg"]];
+  el.innerHTML=ST.shops.map((s,i)=>{
+    const e=ST.entries[s.id]||{};
+    const st=e.status||"pending";
+    const sc={pending:"sp0",checkedin:"sp1",done:"sp2"}[st];
+    const sl={pending:"Pending",checkedin:"Checked In",done:"✔ Done"}[st];
+    const tc=Object.values(e.crates||{}).reduce((a,b)=>a+b,0);
+    const id=s.id;
+    return `
+    <div class="swrap" id="sw${id}">
+      <div class="shdr2" onclick="toggleS('${id}')">
+        <div class="snum">${i+1}</div>
+        <div class="sname">${s.shop_name}</div>
+        ${tc>0?`<div class="scr">${tc}📦</div>`:""}
+        <span class="spill ${sc}">${sl}</span>
+      </div>
+      <div class="sbody" id="sb${id}">
+        <div class="rbtns">
+          <button class="btn bb" onclick="chkIn('${id}')" ${e.checkin?'style="opacity:.6"':""}>
+            ${e.checkin?`✔ IN ${e.checkin.slice(11,16)}`:"🕐 Check In"}</button>
+          <button class="btn bg" onclick="chkOut('${id}')" ${!e.checkin||e.checkout?'style="opacity:.6"':""}>
+            ${e.checkout?`✔ OUT ${e.checkout.slice(11,16)}`:"🕐 Check Out"}</button>
+        </div>
+        <div style="margin-bottom:12px">
+          <div class="ctitle" style="margin-bottom:8px">CRATES DELIVERED</div>
+          ${SKUS.map(([k,l])=>`
+          <div class="crow">
+            <div class="clbl">${l}</div>
+            <div class="ctr">
+              <div class="cbtn" onclick="adj('${id}','${k}',-1)">−</div>
+              <div class="cval" id="c${id}${k}">${(e.crates||{})[k]||0}</div>
+              <div class="cbtn" onclick="adj('${id}','${k}',1)">+</div>
+            </div>
+          </div>`).join("")}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+          <div class="f" style="margin:0"><label>Empties</label>
+            <input type="number" value="${e.empties||0}" min="0" style="padding:8px"
+              onchange="ST.entries['${id}'].empties=+this.value;updateStats()"></div>
+          <div class="f" style="margin:0"><label>Cash ($)</label>
+            <input type="number" value="${e.cash||0}" step="0.01" min="0" style="padding:8px"
+              onchange="ST.entries['${id}'].cash=+this.value;updateStats()"></div>
+        </div>
+        <div class="f" style="margin-bottom:12px"><label>Notes</label>
+          <input type="text" value="${e.notes||""}" placeholder="Issues…" style="padding:8px"
+            onchange="ST.entries['${id}'].notes=this.value"></div>
+        <button class="btn bg" onclick="markDone('${id}')">✔ Mark Shop Done</button>
+      </div>
+    </div>`;
+  }).join("")+`
+  <div style="padding:10px 14px">
+    <button class="btn bo" onclick="openScan()">📷 Scan / Add New Shop</button>
+  </div>
+  <div style="padding:0 14px 14px">
+    <button class="btn by" onclick="finishTrip()">✔ Complete Trip</button>
+  </div>`;
+  updateStats();
+}
+
+function toggleS(id){const b=document.getElementById(`sb${id}`);b.style.display=b.style.display==="block"?"none":"block";}
+function chkIn(id){
+  const e=ST.entries[id];if(e.checkin)return;
+  e.checkin=now();e.status="checkedin";renderShops();toast("✔ Checked in");
+  setTimeout(()=>{const b=document.getElementById(`sb${id}`);if(b)b.style.display="block";},50);
+}
+function chkOut(id){
+  const e=ST.entries[id];if(!e.checkin||e.checkout)return;
+  e.checkout=now();renderShops();toast("✔ Checked out");
+  setTimeout(()=>{const b=document.getElementById(`sb${id}`);if(b)b.style.display="block";},50);
+}
+function adj(id,k,d){
+  const e=ST.entries[id];if(!e.crates)e.crates={};
+  e.crates[k]=Math.max(0,(e.crates[k]||0)+d);
+  const el=document.getElementById(`c${id}${k}`);
+  if(el)el.textContent=e.crates[k];
+  updateStats();
+}
+function markDone(id){
+  const e=ST.entries[id];
+  if(!e.checkin){toast("Check in first!",true);return;}
+  if(!e.checkout)e.checkout=now();
+  e.status="done";renderShops();toast("✔ Shop done");
+}
+function updateStats(){
+  const tot=ST.shops.length;
+  const done=Object.values(ST.entries).filter(e=>e.status==="done").length;
+  const cr=Object.values(ST.entries).reduce((s,e)=>s+Object.values(e.crates||{}).reduce((a,b)=>a+b,0),0);
+  const cash=Object.values(ST.entries).reduce((s,e)=>s+(e.cash||0),0);
+  document.getElementById("st-total").textContent=tot;
+  document.getElementById("st-done").textContent=done;
+  document.getElementById("st-crates").textContent=cr;
+  document.getElementById("st-cash").textContent=`$${cash.toFixed(0)}`;
+}
+
+// ══════════════════════════════════════════════════
+//  SCAN SYSTEM
+//  Tab 1 — QR/Barcode (html5-qrcode)
+//  Tab 2 — Document photo + Tesseract OCR
+//  Tab 3 — Manual text
+// ══════════════════════════════════════════════════
+let _qr=null;
+
+function openScan(){
+  document.getElementById("scan-ov").classList.remove("h");
+  _resetDoc();
+  switchTab("qr");
+}
+function stopScan(){
+  document.getElementById("scan-ov").classList.add("h");
+  _killQR();
+}
+function switchTab(t){
+  ["qr","doc","manual"].forEach(id=>{
+    document.getElementById(`tab-${id}`).classList.toggle("active",id===t);
+    document.getElementById(`pane-${id}`).classList.toggle("active",id===t);
+  });
+  if(t==="qr"){_startQR();}else{_killQR();}
+  if(t==="manual"){setTimeout(()=>document.getElementById("scan-manual").focus(),100);}
+}
+
+// ── QR / Barcode ─────────────────────────────────
+function _startQR(){
+  const st=document.getElementById("qr-status");
+  if(!window.Html5Qrcode){st.textContent="⚠ QR lib not loaded. Use Document tab.";return;}
+  _killQR();
+  st.textContent="Starting camera…";
+  _qr=new Html5Qrcode("qr-reader");
+  _qr.start(
+    {facingMode:"environment"},
+    {fps:10,qrbox:{width:220,height:220}},
+    code=>{stopScan();_promptShopName(code);},
+    ()=>{}
+  ).then(()=>st.textContent="Point at QR code or barcode"
+  ).catch(err=>st.textContent=`Camera error — ${err}. Try the Document tab.`);
+}
+function _killQR(){if(_qr){_qr.stop().catch(()=>{});_qr=null;}}
+
+function _promptShopName(barcode){
+  // Check duplicate barcode
+  const dup=ST.shops.find(s=>s.barcode===barcode);
+  if(dup){toast(`Already on route: ${dup.shop_name}`);return;}
+  const name=prompt(`Barcode: ${barcode}\n\nEnter shop name:`);
+  if(name&&name.trim()) _addShop(name.trim(), barcode);
+}
+
+// ── Document OCR ─────────────────────────────────
+function _resetDoc(){
+  document.getElementById("doc-img").classList.remove("show");
+  document.getElementById("ocr-lines").classList.remove("show");
+  document.getElementById("ocr-lines").innerHTML="";
+  document.getElementById("doc-name").value="";
+  document.getElementById("ocr-status").textContent="";
+  document.getElementById("ocr-hint").style.display="none";
+  document.getElementById("doc-input").value="";
+}
+
+async function handleDoc(evt){
+  const file=evt.target.files[0];
+  if(!file) return;
+  // Show preview
+  const img=document.getElementById("doc-img");
+  const fr=new FileReader();
+  fr.onload=e=>{img.src=e.target.result;img.classList.add("show");};
+  fr.readAsDataURL(file);
+
+  const st=document.getElementById("ocr-status");
+  const lines=document.getElementById("ocr-lines");
+  st.textContent="⏳ Reading document…";
+  lines.classList.remove("show");lines.innerHTML="";
+
+  if(!window.Tesseract){st.textContent="⚠ OCR not loaded. Type shop name below.";return;}
+  try{
+    const res=await Tesseract.recognize(file,"eng",{
+      logger:m=>{if(m.status==="recognizing text") st.textContent=`Reading… ${Math.round(m.progress*100)}%`;}
+    });
+    const rawLines=res.data.text.split("\n").map(l=>l.trim()).filter(l=>l.length>2&&l.length<80);
+    if(!rawLines.length){st.textContent="⚠ Couldn't read text. Type shop name below.";return;}
+    st.textContent=`✔ Read ${rawLines.length} lines — tap the shop name`;
+    document.getElementById("ocr-hint").style.display="block";
+    lines.innerHTML=rawLines.map(l=>
+      `<div class="ocr-line" onclick="pickLine(this,'${l.replace(/'/g,"&#39;").replace(/\\/g,"\\\\")}')">${l}</div>`
+    ).join("");
+    lines.classList.add("show");
+    // Auto-suggest: longest line with high caps ratio (likely business name)
+    const best=rawLines.reduce((a,b)=>{
+      const sa=(a.match(/[A-Z]/g)||[]).length/a.length;
+      const sb=(b.match(/[A-Z]/g)||[]).length/b.length;
+      return sb>sa?b:a;
+    });
+    document.getElementById("doc-name").value=best;
+  }catch(e){st.textContent="⚠ OCR error. Type shop name below.";}
+}
+function pickLine(el,text){
+  document.querySelectorAll(".ocr-line").forEach(l=>l.classList.remove("sel"));
+  el.classList.add("sel");
+  document.getElementById("doc-name").value=text;
+}
+function confirmDoc(){
+  const name=document.getElementById("doc-name").value.trim();
+  if(!name){toast("Enter a shop name",true);return;}
+  stopScan(); _addShop(name,"DOC-"+Date.now());
+}
+
+// ── Manual ───────────────────────────────────────
+function addManual(){
+  const v=document.getElementById("scan-manual").value.trim();
+  if(!v){toast("Enter a shop name",true);return;}
+  stopScan(); _addShop(v,"MAN-"+Date.now());
+}
+
+// ── Add to Supabase ───────────────────────────────
+async function _addShop(name,barcode){
+  if(!ST.trip){toast("No active trip",true);return;}
+  if(ST.shops.find(s=>s.shop_name.toLowerCase()===name.toLowerCase())){
+    toast(`Already on route: ${name}`); return;
+  }
+  try{
+    await dbPost("route_shops",{
+      route:ST.trip.route, shop_name:name.trim(),
+      barcode:barcode, sequence:ST.shops.length+1, active:true
+    },"return=minimal");
+    toast(`✔ "${name}" added`);
+    await loadShops(ST.trip.route);
+  }catch(e){toast("Error: "+e.message.slice(0,50),true);}
+}
+
+// ═══ COMPLETE ═══════════════════════════════════
+function finishTrip(){
+  const done=Object.values(ST.entries).filter(e=>e.status==="done").length;
+  const tot=ST.shops.length;
+  if(done<tot&&!confirm(`${tot-done} shop(s) not done. Complete anyway?`))return;
+  buildSummary();show("s-done");
+}
+function buildSummary(){
+  const skus={retail:0,vansale:0,kids:0,box:0,banana:0};
+  Object.values(ST.entries).forEach(e=>Object.entries(e.crates||{}).forEach(([k,v])=>skus[k]=(skus[k]||0)+v));
+  const tCr=Object.values(skus).reduce((a,b)=>a+b,0);
+  const tCash=Object.values(ST.entries).reduce((s,e)=>s+(e.cash||0),0);
+  const done=Object.values(ST.entries).filter(e=>e.status==="done").length;
+  const t=ST.trip;
+  document.getElementById("sum-body").innerHTML=`
+    <div class="srow"><span class="sk">Week</span><span class="sv2">WEEK ${String(t.week_number||"").padStart(2,"0")}</span></div>
+    <div class="srow"><span class="sk">Route</span><span class="sv2">${t.route||"—"}</span></div>
+    <div class="srow"><span class="sk">Truck</span><span class="sv2">${t.truck||"—"}</span></div>
+    <div class="srow"><span class="sk">Driver</span><span class="sv2">${ST.user}</span></div>
+    <div class="srow"><span class="sk">Date</span><span class="sv2">${new Date().toLocaleDateString()}</span></div>
+    <div class="srow"><span class="sk">Shops Done</span><span class="sv2" style="color:var(--green)">${done}/${ST.shops.length}</span></div>
+    <div class="srow"><span class="sk">Retail</span><span class="sv2">${skus.retail}</span></div>
+    <div class="srow"><span class="sk">Vansale</span><span class="sv2">${skus.vansale}</span></div>
+    <div class="srow"><span class="sk">Kids</span><span class="sv2">${skus.kids}</span></div>
+    <div class="srow"><span class="sk">Box</span><span class="sv2">${skus.box}</span></div>
+    <div class="srow"><span class="sk">Banana 1kg</span><span class="sv2">${skus.banana}</span></div>
+    <div class="srow"><span class="sk">Total Crates</span><span class="sv2" style="color:var(--yellow)">${tCr}</span></div>
+    <div class="srow"><span class="sk">Cash</span><span class="sv2" style="color:var(--gold)">$${tCash.toFixed(2)}</span></div>`;
+}
+
+// ═══ WHATSAPP ════════════════════════════════════
+function shareWA(){
+  const t=ST.trip;
+  const skus={retail:0,vansale:0,kids:0,box:0,banana:0};
+  Object.values(ST.entries).forEach(e=>Object.entries(e.crates||{}).forEach(([k,v])=>skus[k]=(skus[k]||0)+v));
+  const tCr=Object.values(skus).reduce((a,b)=>a+b,0);
+  const tCash=Object.values(ST.entries).reduce((s,e)=>s+(e.cash||0),0);
+  const done=Object.values(ST.entries).filter(e=>e.status==="done").length;
+  const msg=`🚛 *TRIP SHEET — MBONGENI'S DISTRIBUTION*\n━━━━━━━━━━━━━━━━━━\n📅 Week: W${String(t.week_number||"").padStart(2,"0")}\n🛣 Route: ${t.route||"—"}\n🚛 Truck: ${t.truck||"—"}\n👤 Driver: ${ST.user}\n📅 Date: ${new Date().toLocaleDateString()}\n━━━━━━━━━━━━━━━━━━\n✅ Shops: ${done}/${ST.shops.length}\n━━━━━━━━━━━━━━━━━━\n📦 *CRATES*\n  Retail:  ${skus.retail}\n  Vansale: ${skus.vansale}\n  Kids:    ${skus.kids}\n  Box:     ${skus.box}\n  Banana:  ${skus.banana}\n  *TOTAL:  ${tCr}*\n━━━━━━━━━━━━━━━━━━\n💵 Cash: $${tCash.toFixed(2)}\n━━━━━━━━━━━━━━━━━━\n_Mbongeni's Distribution App_`;
+  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,"_blank");
+}
+
+// ═══ SYNC ════════════════════════════════════════
+async function syncAll(){
+  toast("Syncing…");
+  let ok=0,fail=0;
+  for(const[sid,entry]of Object.entries(ST.entries)){
+    const shop=ST.shops.find(s=>s.id===sid);if(!shop)continue;
+    try{
+      await dbPost("trip_sheet_entries",{
+        week_number:ST.trip.week_number,route:ST.trip.route,truck:ST.trip.truck,
+        driver:ST.user,trip_code:ST.trip.trip_code||"",shop_name:shop.shop_name,
+        checkin_time:entry.checkin||null,checkout_time:entry.checkout||null,
+        retail_crates:entry.crates?.retail||0,vansale_crates:entry.crates?.vansale||0,
+        kids_crates:entry.crates?.kids||0,box_crates:entry.crates?.box||0,
+        empties:entry.empties||0,cash:entry.cash||0,notes:entry.notes||""
+      },"return=minimal");ok++;
+    }catch(e){fail++;console.error(e);}
+  }
+  toast(`☁ Synced ${ok}${fail?` (${fail} failed)`:""} ✔`,fail>0);
+  return fail===0;
+}
+async function syncFinish(){const ok=await syncAll();if(ok){toast("✔ Synced!");setTimeout(goHome,1500);}}
+
+// ═══ UTILS ═══════════════════════════════════════
+function now(){return new Date().toISOString().replace("T"," ").slice(0,19);}
+let _tt;
+function toast(msg,isErr=false){
+  const t=document.getElementById("toast");
+  t.textContent=msg;t.className="toast show"+(isErr?" terr":"");
+  clearTimeout(_tt);_tt=setTimeout(()=>t.classList.remove("show"),3000);
+}
+</script>
+</body>
+</html>
